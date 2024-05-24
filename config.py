@@ -9,5 +9,7 @@ setup(
     author="Gabriel Dias",
     libraries=
     ["resquest",
-     "configparser"]
+     "configparser",
+     "beautifulsoup4",
+     "selenium"]
 )
