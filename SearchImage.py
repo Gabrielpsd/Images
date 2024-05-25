@@ -1,22 +1,38 @@
-import requests
+import urllib
+import urllib.request
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+import random, uuid
+import base64
 
-driver = webdriver.Chrome()
+option = Options()
+option.add_argument("--headless")
+driver = webdriver.Chrome(options=option)
 
 #https://yandex.com
 header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"
 }
 
 def createsURL(terms:str)-> str:
-    return f"https://www.google.com/search?q={terms}&udm=2"
+    return f"https://www.google.com/search?q={terms}&imgsz=vga&filetype=png&udm=2"
     #return f"https://yandex.com/images/search?text={terms}&itype=jpeg"
 
+def downloadImage(listImages: list[str]):
+    
+    choice = random.choice(listImages)
+    print(choice)
+    filename = str(uuid.uuid4()) + ".png"
+    print(filename)
+    with urllib.request.urlopen(choice) as response:
+        data = response.read()
+        with open(file=filename,mode='wb') as photo:
+            photo.write(data)
+    
 def gettinDataFromBrowser(url: str):  
     
     #Navigate to Google Images
-    driver.get(url=url)
+    driver.get(url)
     
     
     # Going into search bar and input the search query
@@ -38,7 +54,7 @@ def gettinDataFromBrowser(url: str):
         
     html = driver.page_source
         
-    print(html)
+    # print(html)
     
     driver.quit()
     
@@ -62,20 +78,41 @@ def inputData()-> str:
     return SearchString
 
 
-def treatingContent(HTMLContent: bytes):
+def treatingContent(HTMLContent: bytes) -> list:
+    """
+        Receives a HTML collected by the selenium request
+        
+        return:
+        list: a list with links to acess directly a image
+        
+    """
     content = BeautifulSoup(HTMLContent,"html.parser")
 
-    print(content)
+    #print(content.find(id="main").prettify())
+    saida = content.find(id="rcnt")
+        
+    saida = saida.find_all('img')
     
-    for result in content.find_all("div",attrs={"class":"ContentImage"}):
-        link = result.descendants
+    # print(saida)
+    
+    links = []
+    
+    for image in saida:
+        #print(image["src"])
+        #print(image["width"])
+        #print(image["height"])
+        #width = int(image["width"])
+        #height = int(image["height"])
         
-        print(link)
-        
-        for a in link:
-            print(a)
+        if(image["alt"] != ""):
+            if not 'gif' in image["src"]:
+                links.append(image["src"])
             
-        print(result)
+    """ for result in saida.find_all("div",attrs={"data-attrid":"images universal"}):
+        
+        print(result.prettify()) """
+    
+    return links
     
 def main() -> None:
     """main function
@@ -85,7 +122,13 @@ def main() -> None:
     
     term = inputData()
     url = createsURL(terms=term)
-    gettinDataFromBrowser(url=url)
+    print("URL criada: ",url)
+    print("Realizando busca no browser")
+    HTML = gettinDataFromBrowser(url=url)
+    print("Tratando do conteudo ")
+    result = treatingContent(HTMLContent=HTML)
+    print("Baixando imagem")
+    downloadImage(result)
     
 if __name__ == "__main__":
     main()
