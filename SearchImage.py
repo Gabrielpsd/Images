@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import random, uuid
-import base64
+import sys, time
 
 option = Options()
 option.add_argument("--headless")
@@ -14,47 +14,36 @@ driver = webdriver.Chrome(options=option)
 header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"
 }
 
+BARSIZE = 10
 def createsURL(terms:str)-> str:
     return f"https://www.google.com/search?q={terms}&imgsz=vga&filetype=png&udm=2"
-    #return f"https://yandex.com/images/search?text={terms}&itype=jpeg"
 
-def downloadImage(listImages: list[str]):
-    
+def downloadImage(listImages: list[str])-> str:
+    """ download a src image usin the request function
+
+    Args:
+        listImages (list[str]): a list of validates links
+    """
     choice = random.choice(listImages)
-    print(choice)
     filename = str(uuid.uuid4()) + ".png"
-    print(filename)
     with urllib.request.urlopen(choice) as response:
         data = response.read()
         with open(file=filename,mode='wb') as photo:
             photo.write(data)
+            
+    return filename
     
 def gettinDataFromBrowser(url: str):  
     
     #Navigate to Google Images
     driver.get(url)
     
-    
-    # Going into search bar and input the search query
-    """ search_box = driver.find_element(By.NAME,"q")
-    search_box.send_keys(terms)
-    search_box.submit()
-     """
-    #setting a waiting to the submit
     driver.implicitly_wait(10)
     
-    # Find all <a> elements with href containing "/imgres" - images result links
-    #links = driver.find_elements(By.XPATH, "//a[contains(@href,'imgres')]")
-    
-    #print(driver.page_source)
-    
-    #print the links
     """  for link in links:
         print(link.get_attribute('href')) """
         
     html = driver.page_source
-        
-    # print(html)
     
     driver.quit()
     
@@ -69,12 +58,9 @@ def inputData()-> str:
     terms = input("Digite o(s) termo(s) a ser buscado:").split(' ')
     
     terms = [term for term in terms if term != '']
-
-    #print(terms) depuration
     
     SearchString = '+'.join(str(term) for term in terms)
     
-    #print(SearchString) depuration  
     return SearchString
 
 
@@ -88,31 +74,35 @@ def treatingContent(HTMLContent: bytes) -> list:
     """
     content = BeautifulSoup(HTMLContent,"html.parser")
 
-    #print(content.find(id="main").prettify())
     saida = content.find(id="rcnt")
         
     saida = saida.find_all('img')
     
-    # print(saida)
     
     links = []
     
     for image in saida:
-        #print(image["src"])
-        #print(image["width"])
-        #print(image["height"])
-        #width = int(image["width"])
-        #height = int(image["height"])
         
         if(image["alt"] != ""):
             if not 'gif' in image["src"]:
                 links.append(image["src"])
-            
-    """ for result in saida.find_all("div",attrs={"data-attrid":"images universal"}):
-        
-        print(result.prettify()) """
     
     return links
+    
+def progressBar(downloaded: int, totalFile: int, phase: str):
+    """ this is a funtion that print a progress bar in 
+
+    Args:
+        downloaded (int): bytes donloaded 
+        totalFile (int): total of bytes to be downloaded
+    """
+    progress = int(downloaded*BARSIZE/totalFile)
+    completed = str(int(downloaded*100/totalFile)) + '%'
+    # exit =  str(f''[',chr(9608)*progress,' ',completed, '.'*(BARSIZE),']',str(downloaded)+'/'+str(totalFile)')
+    exit = f"[{'.'*progress}{completed}{'.'*((BARSIZE)-progress)}]{str(downloaded)}/{str(totalFile)} - {phase}"
+    sys.stdout.write(exit + '\r')
+    sys.stdout.flush()   
+    
     
 def main() -> None:
     """main function
@@ -121,14 +111,21 @@ def main() -> None:
     term:str 
     
     term = inputData()
+    time.sleep(2)
+    progressBar(0,5,"Criando URL")
+    time.sleep(2)
     url = createsURL(terms=term)
-    print("URL criada: ",url)
-    print("Realizando busca no browser")
+    progressBar(1,5,"URL Criada")
+    time.sleep(2)
+    progressBar(2,5,"Realizando busca no Browser")
     HTML = gettinDataFromBrowser(url=url)
-    print("Tratando do conteudo ")
+    progressBar(3,5,"Tratando conteudo")
     result = treatingContent(HTMLContent=HTML)
-    print("Baixando imagem")
-    downloadImage(result)
+    progressBar(4,5,"Baixando imagem             ")
+    filename =downloadImage(result)
+    progressBar(5,5,"Imagem Baixada: ")
+    print()
+    print("Nome do arquivo: ",filename)
     
 if __name__ == "__main__":
     main()
