@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import random, uuid
-import sys, time
+import sys, time, os
 
 option = Options()
 option.add_argument("--headless")
@@ -15,6 +15,9 @@ header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KH
 }
 
 BARSIZE = 10
+
+FILELOCATION = os.path.abspath(os.path.dirname(__name__)) + '\\Download'
+
 def createsURL(terms:str)-> str:
     return f"https://www.google.com/search?q={terms}&imgsz=vga&filetype=png&udm=2"
 
@@ -28,10 +31,10 @@ def downloadImage(listImages: list[str])-> str:
     filename = str(uuid.uuid4()) + ".png"
     with urllib.request.urlopen(choice) as response:
         data = response.read()
-        with open(file=filename,mode='wb') as photo:
+        with open(file=os.path.join(FILELOCATION,filename),mode='wb') as photo:
             photo.write(data)
             
-    return filename
+    return os.path.join(FILELOCATION,filename)
     
 def gettinDataFromBrowser(url: str):  
     
@@ -103,7 +106,14 @@ def progressBar(downloaded: int, totalFile: int, phase: str):
     sys.stdout.write(exit + '\r')
     sys.stdout.flush()   
     
-    
+
+def DownloadFile(queryParameters: str): 
+    url = createsURL(terms=queryParameters)
+    HTML = gettinDataFromBrowser(url=url)
+    result = treatingContent(HTMLContent=HTML)
+    filename = downloadImage(result)
+    return filename
+
 def main() -> None:
     """main function
     """
