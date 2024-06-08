@@ -1,0 +1,19 @@
+{
+    "searchEngine":"google",
+    "query":"searchTerm",
+    "epq": "Phrase",
+    "oq": "wordORword",
+    "eq": "NoneOfTheWords",
+    "imgsz": "imageSize",
+    "imgar": "imageProportion",
+    "imgcolor":"imageColor",
+    "imgtype": "imagesTypes",
+    "sitesearch":"site_to_be_searched",
+    "filetype": "filetype"
+
+}
+
+{
+    "response": " the image name",
+    "ignoredParameters": "a dict with the ignored parameters ",
+}

@@ -5,10 +5,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import random, uuid
 import sys, time, os
-
-option = Options()
-option.add_argument("--headless")
-driver = webdriver.Chrome(options=option)
+from SearchEnginesParameters import *
 
 #https://yandex.com
 header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"
@@ -18,8 +15,54 @@ BARSIZE = 10
 
 FILELOCATION = os.path.abspath(os.path.dirname(__name__)) + '\\Download'
 
-def createsURL(terms:str)-> str:
-    return f"https://www.google.com/search?q={terms}&imgsz=vga&filetype=png&udm=2"
+def createsURL(Json:dict[str:any])-> dict[str:any]:
+    print(Json)
+    ignoredParameters = {}
+    
+    if(Json["searchEngine"] == "google"):
+        SearchEngine = SEARCH_ENGINES[Json["searchEngine"]]
+        searcLink = SearchEngine + "&"+"q="+ Json["query"] +"&"+"epq="+Json["epq"]+"&"+"oq="+Json["oq"]+"&"+"eq="+Json["eq"]
+        
+        # image size
+        if Json["imgsz"] not in GOOGLE_IMAGES_SIZES and Json["imgsz"] != "": 
+            ignoredParameters.update({"ImageSizeNotFound":Json["imgsz"]})
+        else:
+            if Json["imgsz"] != "":
+                searcLink = searcLink + "&" + "imgsz=" + Json["imgsz"]
+        
+        #image porportion
+        if Json["imgar"] not in GOOGLE_IMAGES_PROPRORTIONS and Json["imgar"] != "": 
+            ignoredParameters.update({"ImageProportionNotFound":Json["imgar"]})
+        else:
+            if Json["imgar"] != "":
+                searcLink = searcLink + "&" + "imgar=" + Json["imgar"]
+                
+        #image color
+        if Json["imgcolor"] not in GOOGLE_IMAGES_COLORS and Json["imgcolor"] != "": 
+            ignoredParameters.update({"ImageColorNotFound":Json["imgcolor"]})
+        else:
+            if Json["imgcolor"] != "":
+                searcLink = searcLink + "&" + "imgcolor=" + Json["imgcolor"]
+        
+        #image type
+        if Json["imgtype"] not in GOOGLE_IMAGES_TYPES and Json["imgtype"] != "": 
+            ignoredParameters.update({"ImageTypeNotfound":Json["imgtype"]})
+        else:
+            if Json["imgtype"] != "":
+                searcLink = searcLink + "&" + "imgtype=" + Json["imgtype"]
+                
+        #image color
+        if Json["filetype"] not in GOOGLE_FILE_TYPES and Json["filetype"] != "": 
+            ignoredParameters.update({"ImageFileTypeNotFound":Json["filetype"]})
+        else:
+            if Json["filetype"] != "":
+                searcLink = searcLink + "&" + "filetype=" + Json["filetype"]
+                
+        if Json["sitesearch"]:
+            searcLink = searcLink + "&" + "site=" + Json["sitesearch"]   
+            
+        return {"url":searcLink,
+                "ignoredParameters": ignoredParameters}
 
 def downloadImage(listImages: list[str])-> str:
     """ download a src image usin the request function
@@ -37,6 +80,9 @@ def downloadImage(listImages: list[str])-> str:
     return os.path.join(FILELOCATION,filename)
     
 def gettinDataFromBrowser(url: str):  
+    option = Options()
+    option.add_argument("--headless")
+    driver = webdriver.Chrome(options=option)
     
     #Navigate to Google Images
     driver.get(url)
@@ -107,12 +153,27 @@ def progressBar(downloaded: int, totalFile: int, phase: str):
     sys.stdout.flush()   
     
 
-def DownloadFile(queryParameters: str): 
-    url = createsURL(terms=queryParameters)
-    HTML = gettinDataFromBrowser(url=url)
-    result = treatingContent(HTMLContent=HTML)
-    filename = downloadImage(result)
-    return filename
+def DownloadFile(Json: dict[str:any]): 
+    #print("dentro da função: ",Json)
+    if ValidJson(Json):
+        response = createsURL(Json)
+        HTML = gettinDataFromBrowser(url=response["url"])
+        result = treatingContent(HTMLContent=HTML)
+        filename = downloadImage(result)
+        response.update({"Image":filename})
+        return response
+    else:
+        #print("Nenhum parametro de busca foi passado")
+        return {}
+
+def ValidJson(Json: dict[str:any]) -> bool:
+    if not (Json["epq"]) and not (Json["oq"]) and not (Json["query"]):
+        print("nenhum parametro passado")
+        return False
+    if Json["searchEngine"] not in SEARCH_ENGINES:
+        return False
+    
+    return True
 
 def main() -> None:
     """main function

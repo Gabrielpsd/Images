@@ -1,11 +1,21 @@
 from flask import Flask,request,send_file
 import SearchImage as Search
 app = Flask(__name__)
-@app.get("/photos/<queryparameters>")
-def helloworld(queryparameters):
+@app.get("/photos")
+def helloworld():
+    #print(request.get_json())
+    #print(Search.DownloadFile(request.get_json()))
     if request.method == 'GET':
-        result = Search.DownloadFile(queryParameters=queryparameters)
-        return send_file(path_or_file=result,as_attachment='png')
+        json = request.get_json()
+        
+        response = Search.DownloadFile(json)
+        
+        if response:
+            if response["response"] != "":
+                return send_file(path_or_file=response["response"],as_attachment='png')
+        #result = Search.DownloadFile(queryParameters=queryparameters)
+        else:
+            return {"nothing":"nothin to show"}
 
 
 if __name__ == "__main__":
