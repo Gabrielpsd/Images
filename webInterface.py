@@ -7,12 +7,12 @@ def helloworld():
     #print(Search.DownloadFile(request.get_json()))
     if request.method == 'GET':
         json = request.get_json()
-        
+        print(json)
         response = Search.DownloadFile(json)
         
         if response:
-            if response["response"] != "":
-                return send_file(path_or_file=response["response"],as_attachment='png')
+            if response["image"] != "":
+                return send_file(path_or_file=response["image"],as_attachment='png')
         #result = Search.DownloadFile(queryParameters=queryparameters)
         else:
             return {"nothing":"nothin to show"}

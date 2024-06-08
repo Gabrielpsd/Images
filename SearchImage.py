@@ -21,44 +21,49 @@ def createsURL(Json:dict[str:any])-> dict[str:any]:
     
     if(Json["searchEngine"] == "google"):
         SearchEngine = SEARCH_ENGINES[Json["searchEngine"]]
-        searcLink = SearchEngine + "&"+"q="+ Json["query"] +"&"+"epq="+Json["epq"]+"&"+"oq="+Json["oq"]+"&"+"eq="+Json["eq"]
+        query = Json.pop("query","")
+        epq = Json.pop("epq","")
+        oq = Json.pop("oq","")
+        eq = Json.pop("eq","")
+        searcLink = SearchEngine + "&"+"q="+ query +"&"+"epq="+epq+"&"+"oq="+oq+"&"+"eq="+eq
         
         # image size
-        if Json["imgsz"] not in GOOGLE_IMAGES_SIZES and Json["imgsz"] != "": 
-            ignoredParameters.update({"ImageSizeNotFound":Json["imgsz"]})
+        imgz = Json.pop("imgsz","")
+        if imgz not in GOOGLE_IMAGES_SIZES and  imgz != "": 
+            ignoredParameters.update({"ImageSizeNotFound":imgz})
         else:
-            if Json["imgsz"] != "":
-                searcLink = searcLink + "&" + "imgsz=" + Json["imgsz"]
+            searcLink = searcLink + "&" + "imgsz=" + imgz
         
         #image porportion
-        if Json["imgar"] not in GOOGLE_IMAGES_PROPRORTIONS and Json["imgar"] != "": 
-            ignoredParameters.update({"ImageProportionNotFound":Json["imgar"]})
+        imgar = Json.pop("imgar","")
+        if imgar not in GOOGLE_IMAGES_PROPRORTIONS and imgar != "": 
+            ignoredParameters.update({"ImageProportionNotFound":imgar})
         else:
-            if Json["imgar"] != "":
-                searcLink = searcLink + "&" + "imgar=" + Json["imgar"]
+            searcLink = searcLink + "&" + "imgar=" + imgar
                 
         #image color
-        if Json["imgcolor"] not in GOOGLE_IMAGES_COLORS and Json["imgcolor"] != "": 
-            ignoredParameters.update({"ImageColorNotFound":Json["imgcolor"]})
+        imgcolor = Json.pop("imgcolor","")
+        if imgcolor not in GOOGLE_IMAGES_COLORS and imgcolor != "": 
+            ignoredParameters.update({"ImageColorNotFound":imgcolor})
         else:
-            if Json["imgcolor"] != "":
-                searcLink = searcLink + "&" + "imgcolor=" + Json["imgcolor"]
+            searcLink = searcLink + "&" + "imgcolor=" + imgcolor
         
         #image type
-        if Json["imgtype"] not in GOOGLE_IMAGES_TYPES and Json["imgtype"] != "": 
-            ignoredParameters.update({"ImageTypeNotfound":Json["imgtype"]})
+        imgtype = Json.pop("imgtype","")
+        if imgtype not in GOOGLE_IMAGES_TYPES and imgtype != "": 
+            ignoredParameters.update({"ImageTypeNotfound":imgtype})
         else:
-            if Json["imgtype"] != "":
-                searcLink = searcLink + "&" + "imgtype=" + Json["imgtype"]
+            searcLink = searcLink + "&" + "imgtype=" + imgtype
                 
         #image color
-        if Json["filetype"] not in GOOGLE_FILE_TYPES and Json["filetype"] != "": 
-            ignoredParameters.update({"ImageFileTypeNotFound":Json["filetype"]})
+        filetype = Json.pop("filetype","")
+        if filetype not in GOOGLE_FILE_TYPES and filetype != "": 
+            ignoredParameters.update({"ImageFileTypeNotFound":filetype})
         else:
-            if Json["filetype"] != "":
-                searcLink = searcLink + "&" + "filetype=" + Json["filetype"]
-                
-        if Json["sitesearch"]:
+            searcLink = searcLink + "&" + "filetype=" + filetype
+        
+        sitesearch = Json.pop("sitesearch","")
+        if sitesearch:
             searcLink = searcLink + "&" + "site=" + Json["sitesearch"]   
             
         return {"url":searcLink,
@@ -155,21 +160,26 @@ def progressBar(downloaded: int, totalFile: int, phase: str):
 
 def DownloadFile(Json: dict[str:any]): 
     #print("dentro da função: ",Json)
-    if ValidJson(Json):
-        response = createsURL(Json)
+    queryValidation = Json.copy()
+    if ValidJson(queryValidation):
+        response = createsURL(Json=Json)
         HTML = gettinDataFromBrowser(url=response["url"])
         result = treatingContent(HTMLContent=HTML)
         filename = downloadImage(result)
-        response.update({"Image":filename})
+        response.update({"image":filename})
         return response
     else:
         #print("Nenhum parametro de busca foi passado")
         return {}
 
 def ValidJson(Json: dict[str:any]) -> bool:
-    if not (Json["epq"]) and not (Json["oq"]) and not (Json["query"]):
+    query = Json.pop("query",False)
+    epq = Json.pop("epq",False)
+    oq = Json.pop("oq",False)
+    if not(query or epq or oq):
         print("nenhum parametro passado")
         return False
+
     if Json["searchEngine"] not in SEARCH_ENGINES:
         return False
     
