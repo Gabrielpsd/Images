@@ -6,3 +6,4 @@ config.ini
 saida.txt
 Download/*
 __pycache__/*
+.env

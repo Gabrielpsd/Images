@@ -1,31 +1,45 @@
 import urllib
 import urllib.request
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 import random, uuid
 import sys, time, os
 from SearchEnginesParameters import *
-
-#https://yandex.com
-header={'User-Agent':"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"
-}
+import psycopg2
+from dotenv import load_dotenv
+import json
 
 BARSIZE = 10
 
 FILELOCATION = os.path.abspath(os.path.dirname(__name__)) + '\\Download'
 
 def createsURL(Json:dict[str:any])-> dict[str:any]:
-    print(Json)
     ignoredParameters = {}
+    random.seed()
+    
+    while(True):
+        number = random.randint(0,300)
+        if number % 20 == 0:
+            break
     
     if(Json["searchEngine"] == "google"):
         SearchEngine = SEARCH_ENGINES[Json["searchEngine"]]
         query = Json.pop("query","")
+        if query != "":
+            query = inputData(query)
+                    
         epq = Json.pop("epq","")
+        if epq != "":
+            epq = inputData(epq)
+            
         oq = Json.pop("oq","")
+        if oq != "":
+            oq = inputData(oq)
+            
         eq = Json.pop("eq","")
-        searcLink = SearchEngine + "&"+"q="+ query +"&"+"epq="+epq+"&"+"oq="+oq+"&"+"eq="+eq
+        if eq != "":
+            eq = inputData(eq)
+            
+        searcLink = SearchEngine + "&"+"q="+ query +"&"+"epq="+epq+"&"+"oq="+oq+"&"+"eq="+eq + "&" + str(number)
         
         # image size
         imgz = Json.pop("imgsz","")
@@ -69,109 +83,96 @@ def createsURL(Json:dict[str:any])-> dict[str:any]:
         return {"url":searcLink,
                 "ignoredParameters": ignoredParameters}
 
-def downloadImage(listImages: list[str])-> str:
+def creatJsonFromList(listImages: list[str])-> dict[str:str]:
+    # creates a unic id to the search
+    idOfSearch = str(uuid.uuid4())
+    response = {}
+    response['id'] = idOfSearch
+    response['imagesLinks'] = {}
+    for index,link in enumerate(listImages):
+        response["imagesLinks"].update({f"image-{index}":link})   
+    
+    return response   
+    
+def downloadImage(Json:dict[int:str],quantidade: int)-> dict[str:str]:
     """ download a src image usin the request function
 
     Args:
         listImages (list[str]): a list of validates links
     """
-    choice = random.choice(listImages)
-    filename = str(uuid.uuid4()) + ".png"
-    with urllib.request.urlopen(choice) as response:
-        data = response.read()
-        with open(file=os.path.join(FILELOCATION,filename),mode='wb') as photo:
-            photo.write(data)
-            
-    return os.path.join(FILELOCATION,filename)
+    listImages = list(Json.values())
     
-def gettinDataFromBrowser(url: str):  
-    option = Options()
-    option.add_argument("--headless")
-    driver = webdriver.Chrome(options=option)
-    
-    #Navigate to Google Images
-    driver.get(url)
-    
-    driver.implicitly_wait(10)
-    
-    """  for link in links:
-        print(link.get_attribute('href')) """
+    if quantidade < 0:
+        quantidade = 1
+    elif quantidade > 20:
+        quantidade = 20
         
-    html = driver.page_source
+    downloaded = []
+    contador = 0
+    return_ = {}
     
-    driver.quit()
-    
-    return html
-    
-def inputData()-> str:
-    """ this function gets the terms to be searched and formates to the "q" google url parameter
+    while contador < quantidade:
+        choice = random.choice(listImages)
+        if choice not in downloaded:
+            downloaded.append(choice)
+            filename = str(uuid.uuid4()) + ".png"
+            with urllib.request.urlopen(choice) as response:
+                data = response.read()
+                with open(file=os.path.join(FILELOCATION,filename),mode='wb') as photo:
+                    photo.write(data)
+            
+                return_.update({f"image{contador}" : os.path.join(FILELOCATION,filename)})
+                contador = contador + 1 
+            
+    return return_ 
 
-    Returns:
-        str: search term to be used in "q" parameter
-    """
-    terms = input("Digite o(s) termo(s) a ser buscado:").split(' ')
+def getSearcFromDatabase(uuid: str) -> dict[str:str]:
+    load_dotenv()
+    conn = psycopg2.connect(f"dbname=Image user=postgres password={os.getenv("DATABASE_PASSWORD")}")
     
+    cursor = conn.cursor()
+    cursor.execute(f"select responseterm from searchedimages where id = \'{uuid}\' ")
+    response = cursor.fetchall() 
+    conn.close()
+    
+    return response[0][0]
+
+def gettinDataFromBrowser(url: str):  
+    with urllib.request.urlopen(url=url['url']) as response:
+        return response.read()
+     
+def inputData(termos: str)-> str:
+    terms = termos.split(' ')    
     terms = [term for term in terms if term != '']
-    
     SearchString = '+'.join(str(term) for term in terms)
-    
     return SearchString
 
-
-def treatingContent(HTMLContent: bytes) -> list:
-    """
-        Receives a HTML collected by the selenium request
-        
-        return:
-        list: a list with links to acess directly a image
-        
-    """
-    content = BeautifulSoup(HTMLContent,"html.parser")
-
-    saida = content.find(id="rcnt")
-        
-    saida = saida.find_all('img')
-    
-    
-    links = []
-    
-    for image in saida:
-        
-        if(image["alt"] != ""):
-            if not 'gif' in image["src"]:
-                links.append(image["src"])
-    
-    return links
-    
 def progressBar(downloaded: int, totalFile: int, phase: str):
-    """ this is a funtion that print a progress bar in 
-
-    Args:
-        downloaded (int): bytes donloaded 
-        totalFile (int): total of bytes to be downloaded
-    """
     progress = int(downloaded*BARSIZE/totalFile)
     completed = str(int(downloaded*100/totalFile)) + '%'
-    # exit =  str(f''[',chr(9608)*progress,' ',completed, '.'*(BARSIZE),']',str(downloaded)+'/'+str(totalFile)')
     exit = f"[{'.'*progress}{completed}{'.'*((BARSIZE)-progress)}]{str(downloaded)}/{str(totalFile)} - {phase}"
     sys.stdout.write(exit + '\r')
     sys.stdout.flush()   
+
+def treatingContent(HTMLContent: bytes) -> list:
+    content = BeautifulSoup(HTMLContent,"html.parser")
+    saida = content.find(class_="GpQGbf")
+    saida = saida.find_all('img')
+    links = []
+    for image in saida:
+        links.append(image["src"])
     
-
-def DownloadFile(Json: dict[str:any]): 
-    #print("dentro da função: ",Json)
-    queryValidation = Json.copy()
-    if ValidJson(queryValidation):
-        response = createsURL(Json=Json)
-        HTML = gettinDataFromBrowser(url=response["url"])
-        result = treatingContent(HTMLContent=HTML)
-        filename = downloadImage(result)
-        response.update({"image":filename})
-        return response
-    else:
-        #print("Nenhum parametro de busca foi passado")
-        return {}
-
+    return links
+    
+def saveSearchInDatabase(EntryJson: dict[str:str],response: dict[str:str])->None:
+    load_dotenv()
+    conn = psycopg2.connect(f"dbname=Image user=postgres password={os.getenv("DATABASE_PASSWORD")}")
+    
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO searchedImages (id,searchedTerm, responseTerm,ignoredParameters) VALUES (%s, %s,%s,%s)",(response["id"],json.dumps(EntryJson),json.dumps(response["imagesLinks"]),json.dumps(response["ignored"])))
+    conn.commit()
+    conn.close()
+    
 def ValidJson(Json: dict[str:any]) -> bool:
     query = Json.pop("query",False)
     epq = Json.pop("epq",False)
@@ -179,34 +180,43 @@ def ValidJson(Json: dict[str:any]) -> bool:
     if not(query or epq or oq):
         print("nenhum parametro passado")
         return False
-
+    
     if Json["searchEngine"] not in SEARCH_ENGINES:
         return False
     
     return True
 
+def searchImage(json: dict[str:str]) -> dict[str:str]:
+    
+    if ValidJson(json.copy()):
+        
+        if json.copy().pop("id",False):
+            return getSearcFromDatabase(json["id"])
+        else:
+            response = createsURL(Json=json.copy())
+            HTML = gettinDataFromBrowser(url=response)
+            result = treatingContent(HTMLContent=HTML)
+            responseJson =creatJsonFromList(result)
+            responseJson.update({"ignored":response["ignoredParameters"]})
+            saveSearchInDatabase(json,responseJson)
+            return responseJson
+    else:
+        return {}
+    
 def main() -> None:
     """main function
     """
     
-    term:str 
-    
-    term = inputData()
-    time.sleep(2)
-    progressBar(0,5,"Criando URL")
-    time.sleep(2)
-    url = createsURL(terms=term)
-    progressBar(1,5,"URL Criada")
-    time.sleep(2)
-    progressBar(2,5,"Realizando busca no Browser")
-    HTML = gettinDataFromBrowser(url=url)
-    progressBar(3,5,"Tratando conteudo")
-    result = treatingContent(HTMLContent=HTML)
-    progressBar(4,5,"Baixando imagem             ")
-    filename =downloadImage(result)
-    progressBar(5,5,"Imagem Baixada: ")
-    print()
-    print("Nome do arquivo: ",filename)
+    # a test of an search
+    term = {
+    "searchEngine":"google",
+    "query":"pacote de arroz 5kg",
+    "quantity": 1,
+    }
+
+    response = searchImage(term)
+    print(response)
+    downloadImage(response["imagesLinks"],5)
     
 if __name__ == "__main__":
     main()

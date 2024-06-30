@@ -1,5 +1,6 @@
 {
     "searchEngine":"google",
+    "id":"idOfAndOldSearch",
     "query":"searchTerm",
     "epq": "Phrase",
     "oq": "wordORword",
@@ -9,11 +10,11 @@
     "imgcolor":"imageColor",
     "imgtype": "imagesTypes",
     "sitesearch":"site_to_be_searched",
-    "filetype": "filetype"
-
+    "filetype": "filetype",
+    "quantity": 1
 }
 
 {
     "response": " the image name",
     "ignoredParameters": "a dict with the ignored parameters ",
-}
+}   

@@ -63,5 +63,5 @@ GOOGLE_FILE_TYPES = {
 }
 
 SEARCH_ENGINES = {
-    "google": "https://www.google.com/search?udm=2&tbs=sur:cl"
+    "google": "https://www.google.com/search?udm=2"
 }

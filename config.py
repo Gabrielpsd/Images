@@ -9,7 +9,8 @@ setup(
     author="Gabriel Dias",
     libraries=
     ["resquest",
-     "configparser",
+     "python-dotenv",
      "beautifulsoup4",
-     "selenium"]
+     "selenium",
+     "psycopg2-binary"]
 )

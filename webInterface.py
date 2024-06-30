@@ -16,9 +16,14 @@ def helloworld():
         #result = Search.DownloadFile(queryParameters=queryparameters)
         else:
             return {"nothing":"nothin to show"}
+        
+@app.get("/photo")
+def returnPhoto():
+    if request.method == 'GET':
+        json = request.get_json()
+        print(json)
+        return Search.DownloadFile(json)
 
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-     
